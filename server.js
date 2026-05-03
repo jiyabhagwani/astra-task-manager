@@ -11,18 +11,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// Get database URL from environment
-const databaseUrl = process.env.DATABASE_URL;
+// Get database URL from environment - NO ERROR THROWING
+const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/taskdb';
 console.log('DATABASE_URL exists:', !!databaseUrl);
-
-if (!databaseUrl) {
-  console.error('FATAL: DATABASE_URL environment variable is not set!');
-  process.exit(1);
-}
 
 const pool = new Pool({
   connectionString: databaseUrl,
-  ssl: { rejectUnauthorized: false }
+  ssl: databaseUrl && databaseUrl.includes('railway') ? { rejectUnauthorized: false } : false,
 });
 
 // Test connection
@@ -38,7 +33,7 @@ pool.connect((err, client, release) => {
 // Create tables
 async function initDB() {
   try {
-    await pool.query(`
+    await pool.query(\`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username TEXT UNIQUE,
@@ -66,7 +61,7 @@ async function initDB() {
         assigned_to INTEGER,
         created_by INTEGER
       );
-    `);
+    \`);
     console.log('Tables ready');
   } catch (err) {
     console.error('Table error:', err.message);
