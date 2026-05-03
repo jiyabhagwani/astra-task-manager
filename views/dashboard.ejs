@@ -10,7 +10,6 @@
   --bg:#07111F;
   --bg2:#0B1D33;
   --card:rgba(255,255,255,0.08);
-  --glass:rgba(255,255,255,0.06);
   --border:rgba(255,255,255,0.08);
   --text:#F8FAFC;
   --muted:#94A3B8;
@@ -18,17 +17,12 @@
   --accent2:#0EA5E9;
   --teal:#14B8A6;
   --purple:#818CF8;
-  --danger:#EF4444;
   --warning:#F59E0B;
   --success:#10B981;
   --shadow:0 20px 50px rgba(0,0,0,0.35);
 }
 
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-}
+*{margin:0;padding:0;box-sizing:border-box;}
 
 body{
   font-family:Inter,Segoe UI,sans-serif;
@@ -40,23 +34,12 @@ body{
   min-height:100vh;
 }
 
-body::before{
-  content:'';
-  position:fixed;
-  inset:0;
-  background:
-    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-  background-size:40px 40px;
-  pointer-events:none;
-}
-
 .navbar{
   position:sticky;
   top:0;
   z-index:100;
   backdrop-filter:blur(18px);
-  background:rgba(7,17,31,0.75);
+  background:rgba(7,17,31,0.85);
   border-bottom:1px solid var(--border);
   display:flex;
   justify-content:space-between;
@@ -89,7 +72,6 @@ body::before{
 .logout{
   color:white;
   text-decoration:none;
-  opacity:0.9;
 }
 
 .container{
@@ -101,7 +83,6 @@ body::before{
 .hero{
   background:linear-gradient(135deg,rgba(56,189,248,0.18),rgba(20,184,166,0.14));
   border:1px solid var(--border);
-  backdrop-filter:blur(20px);
   border-radius:32px;
   padding:36px;
   margin-bottom:24px;
@@ -115,7 +96,6 @@ body::before{
 
 .hero p{
   color:var(--muted);
-  font-size:16px;
 }
 
 .announcement{
@@ -135,11 +115,11 @@ body::before{
 
 .card{
   background:var(--card);
-  backdrop-filter:blur(18px);
   border:1px solid var(--border);
   border-radius:26px;
   padding:24px;
   box-shadow:var(--shadow);
+  backdrop-filter:blur(18px);
 }
 
 .stat{
@@ -153,6 +133,10 @@ body::before{
 
 .stat p{
   color:var(--muted);
+}
+
+.search{
+  margin-bottom:20px;
 }
 
 .section-grid{
@@ -189,10 +173,6 @@ button{
   background:linear-gradient(135deg,var(--accent),var(--teal));
 }
 
-button:hover{
-  transform:translateY(-1px);
-}
-
 .task,.project,.user{
   padding:16px;
   border-radius:18px;
@@ -214,26 +194,20 @@ button:hover{
   font-weight:700;
 }
 
-.pending{background:var(--warning)}
-.in_progress{background:var(--accent2)}
-.done{background:var(--success)}
-
-.priority-high{color:#FCA5A5}
-.priority-medium{color:#FCD34D}
-.priority-low{color:#86EFAC}
-
-.search{
-  margin-bottom:20px;
-}
-
-.search input{
-  margin-bottom:0;
-}
+.pending{background:var(--warning);}
+.in_progress{background:var(--accent2);}
+.done{background:var(--success);}
 
 .admin-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:18px;
+}
+
+.empty{
+  text-align:center;
+  color:var(--muted);
+  padding:24px;
 }
 
 .footer{
@@ -243,12 +217,6 @@ button:hover{
   font-size:13px;
 }
 
-.empty{
-  text-align:center;
-  color:var(--muted);
-  padding:24px;
-}
-
 @media(max-width:1100px){
   .section-grid,.admin-grid{
     grid-template-columns:1fr;
@@ -256,10 +224,6 @@ button:hover{
 
   .hero h1{
     font-size:30px;
-  }
-
-  .navbar{
-    padding:16px;
   }
 
   .container{
@@ -275,8 +239,8 @@ button:hover{
   <div class="logo">🌊 ASTRA</div>
 
   <div class="nav-right">
-    <span><%= greeting || 'Welcome' %>, <%= user?.username || 'User' %></span>
-    <span class="role"><%= user?.role || 'member' %></span>
+    <span><%= greeting || 'Welcome' %>, <%= user && user.username ? user.username : 'User' %></span>
+    <span class="role"><%= user && user.role ? user.role : 'member' %></span>
     <a href="/logout" class="logout">Logout</a>
   </div>
 </nav>
@@ -287,13 +251,12 @@ button:hover{
     <h1>Ocean Command Center</h1>
     <p>Minimal. Strategic. Enterprise-grade execution for elite teams.</p>
 
-    <% if(announcement) { %>
+    <% if(typeof announcement !== 'undefined' && announcement) { %>
       <div class="announcement">
         📢 <%= announcement.message %>
       </div>
     <% } %>
   </section>
-
 
   <section class="stats-grid">
     <div class="card stat">
@@ -317,11 +280,9 @@ button:hover{
     </div>
   </section>
 
-
   <div class="search">
-    <input type="text" id="searchInput" placeholder="🔎 Search missions, projects, priorities..." onkeyup="searchTasks()">
+    <input type="text" id="searchInput" placeholder="🔎 Search missions..." onkeyup="searchTasks()">
   </div>
-
 
   <section class="section-grid">
 
@@ -335,7 +296,6 @@ button:hover{
 
       <div id="projectList"></div>
     </div>
-
 
     <div class="card">
       <h2 class="section-title">🚀 Mission Assignment</h2>
@@ -363,12 +323,10 @@ button:hover{
 
   </section>
 
-
   <section class="card">
     <h2 class="section-title">📋 Live Mission Feed</h2>
     <div id="tasksList"></div>
   </section>
-
 
   <% if(isAdmin) { %>
   <section class="card">
@@ -399,13 +357,11 @@ button:hover{
   </section>
   <% } %>
 
-
   <div class="footer">
     Built by Jiya Bhagwani ✨ | ASTRA Ocean OS
   </div>
 
 </div>
-
 
 <script>
 let allTasks = [];
@@ -414,12 +370,12 @@ let allUsers = [];
 
 function escapeHtml(str){
   if(!str) return '';
-  return str.replace(/[&<>"]/g, tag => ({
+  return str.replace(/[&<>"]/g, m => ({
     '&':'&amp;',
     '<':'&lt;',
     '>':'&gt;',
     '"':'&quot;'
-  }[tag] || tag));
+  })[m]);
 }
 
 function loadData(){
@@ -458,25 +414,30 @@ function updateStats(){
 
 function renderProjects(){
   const container = document.getElementById('projectList');
+  const taskProject = document.getElementById('taskProject');
 
   if(!allProjects.length){
     container.innerHTML = `<div class="empty">No active projects</div>`;
-  } else {
-    container.innerHTML = allProjects.map(project=>`
-      <div class="project">
-        <div class="top">
-          <strong>${escapeHtml(project.name)}</strong>
-        </div>
-      </div>
-    `).join('');
+    taskProject.innerHTML = `<option value="">No Project</option>`;
+    return;
   }
 
-  document.getElementById('taskProject').innerHTML =
-    allProjects.map(project=>`
+  container.innerHTML = allProjects.map(project=>`
+    <div class="project">
+      <div class="top">
+        <strong>${escapeHtml(project.name)}</strong>
+      </div>
+    </div>
+  `).join('');
+
+  taskProject.innerHTML = `
+    <option value="">No Project</option>
+    ${allProjects.map(project=>`
       <option value="${project.id}">
         ${escapeHtml(project.name)}
       </option>
-    `).join('');
+    `).join('')}
+  `;
 }
 
 function populateAssignDropdown(){
@@ -484,11 +445,19 @@ function populateAssignDropdown(){
 
   if(!select) return;
 
-  select.innerHTML = allUsers.map(user=>`
-    <option value="${user.id}">
-      ${escapeHtml(user.username)} (${escapeHtml(user.role)})
-    </option>
-  `).join('');
+  if(!allUsers.length){
+    select.innerHTML = `<option value="">Assign To Me</option>`;
+    return;
+  }
+
+  select.innerHTML = `
+    <option value="">Assign To Me</option>
+    ${allUsers.map(user=>`
+      <option value="${user.id}">
+        ${escapeHtml(user.username)} (${escapeHtml(user.role || 'member')})
+      </option>
+    `).join('')}
+  `;
 }
 
 function renderTasks(){
@@ -512,8 +481,8 @@ function renderTasks(){
 
       <div style="margin-top:8px;color:var(--muted);font-size:13px;">
         📁 ${escapeHtml(task.project_name || 'No Project')}
-        | 👤 ${escapeHtml(task.assigned_to_name || 'Unassigned')}
-        | <span class="priority-${escapeHtml(task.priority || 'medium')}">Priority: ${escapeHtml(task.priority || 'medium')}</span>
+        | 👤 ${escapeHtml(task.assigned_to_name || 'User')}
+        | Priority: ${escapeHtml(task.priority || 'medium')}
       </div>
 
       <form method="POST" action="/tasks/${task.id}/status" style="margin-top:12px;">
@@ -533,7 +502,7 @@ function renderUsers(){
 
   container.innerHTML = allUsers.map(user=>`
     <div class="user">
-      👤 ${escapeHtml(user.username)} — ${escapeHtml(user.role)}
+      👤 ${escapeHtml(user.username)} — ${escapeHtml(user.role || 'member')}
       ${
         user.role !== 'admin'
         ? `<form method="POST" action="/make-admin/${user.id}" style="margin-top:8px;">
@@ -547,15 +516,29 @@ function renderUsers(){
 
 function loadAdminStats(){
   fetch('/api/admin/stats')
-    .then(r=>r.json())
+    .then(r=>r.ok ? r.json() : null)
     .then(stats=>{
-      document.getElementById('adminStats').innerHTML = `
-        <div class="project">👥 Total Team: ${stats.totalUsers}</div>
-        <div class="project">📁 Total Projects: ${stats.totalProjects}</div>
-        <div class="project">📋 Total Tasks: ${stats.totalTasks}</div>
-        <div class="project">⚡ Team Efficiency: ${stats.teamEfficiency}%</div>
-        <div class="project">⚠️ Overdue Missions: ${stats.overdueTasks}</div>
+      const adminStats = document.getElementById('adminStats');
+      if(!adminStats) return;
+
+      if(!stats){
+        adminStats.innerHTML = `<div class="empty">Admin analytics unavailable</div>`;
+        return;
+      }
+
+      adminStats.innerHTML = `
+        <div class="project">👥 Total Team: ${stats.totalUsers || 0}</div>
+        <div class="project">📁 Total Projects: ${stats.totalProjects || 0}</div>
+        <div class="project">📋 Total Tasks: ${stats.totalTasks || 0}</div>
+        <div class="project">⚡ Team Efficiency: ${stats.teamEfficiency || 0}%</div>
+        <div class="project">⚠️ Overdue Missions: ${stats.overdueTasks || 0}</div>
       `;
+    })
+    .catch(()=>{
+      const adminStats = document.getElementById('adminStats');
+      if(adminStats){
+        adminStats.innerHTML = `<div class="empty">Admin analytics unavailable</div>`;
+      }
     });
 }
 
