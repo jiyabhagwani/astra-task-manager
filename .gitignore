@@ -1,6 +1,3 @@
-node_modules/
-taskmanager.db
+node_modules
 .env
-.DS_Store
-*.log
-package-lock.json
+taskmanager.db
