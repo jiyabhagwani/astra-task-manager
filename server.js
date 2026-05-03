@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
@@ -7,7 +8,9 @@ const db = require('./db');
 
 const app = express();
 
-// ── App Config ───────────────────────────────
+// ─────────────────────────────────────────────
+// APP CONFIG
+// ─────────────────────────────────────────────
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -15,7 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.use(session({
-  secret: process.env.SECRET_KEY || 'secret123',
+  secret: process.env.SECRET_KEY || 'astra_super_secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -24,15 +27,25 @@ app.use(session({
   }
 }));
 
-// ── Auth Middleware ──────────────────────────
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
 function requireLogin(req, res, next) {
   if (!req.session.user) {
     return res.redirect('/login');
   }
+
   next();
 }
 
-// ── Greeting Helper ──────────────────────────
+function requireAdmin(req, res, next) {
+  if (!req.session.user || req.session.user.role !== 'admin') {
+    return res.status(403).send('Forbidden');
+  }
+
+  next();
+}
+
 function getGreeting() {
   const hour = new Date().getHours();
 
@@ -42,46 +55,82 @@ function getGreeting() {
   return 'Good Evening';
 }
 
-// ── Home ─────────────────────────────────────
+// ─────────────────────────────────────────────
+// HOME
+// ─────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
-// ── Login ────────────────────────────────────
+// ─────────────────────────────────────────────
+// LOGIN
+// ─────────────────────────────────────────────
 app.get('/login', (req, res) => {
-  res.render('login', { error: null });
+  res.render('login', {
+    error: null
+  });
 });
 
 app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
   try {
     const user = db.prepare(
-      'SELECT * FROM users WHERE username = ?'
-    ).get(username);
+      'SELECT * FROM users WHERE email = ?'
+    ).get(email);
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
       return res.render('login', {
-        error: 'Invalid username or password'
+        error: 'Invalid email or password'
       });
     }
 
-    req.session.user = user;
+    const validPassword = await bcrypt.compare(
+      password,
+      user.password
+    );
 
-    res.redirect('/dashboard');
+    if (!validPassword) {
+      return res.render('login', {
+        error: 'Invalid email or password'
+      });
+    }
+
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role || 'member'
+    };
+
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session Save Error:', err);
+
+        return res.render('login', {
+          error: 'Session failed'
+        });
+      }
+
+      return res.redirect('/dashboard');
+    });
 
   } catch (err) {
-    console.error('Login error:', err);
+    console.error('Login Error:', err);
 
-    res.render('login', {
-      error: 'Login failed: ' + err.message
+    return res.render('login', {
+      error: 'Login failed'
     });
   }
 });
 
-// ── Signup ───────────────────────────────────
+// ─────────────────────────────────────────────
+// SIGNUP
+// ─────────────────────────────────────────────
 app.get('/signup', (req, res) => {
-  res.render('signup', { error: null });
+  res.render('signup', {
+    error: null
+  });
 });
 
 app.post('/signup', async (req, res) => {
@@ -100,54 +149,84 @@ app.post('/signup', async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
 
-    db.prepare(
-      'INSERT INTO users (username, email, password) VALUES (?, ?, ?)'
-    ).run(username, email, hash);
+    const role = email.endsWith('@astra.com')
+      ? 'admin'
+      : 'member';
+
+    db.prepare(`
+      INSERT INTO users
+      (username, email, password, role)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      username,
+      email,
+      hash,
+      role
+    );
 
     res.redirect('/login');
 
   } catch (err) {
-    console.error('Signup error:', err);
+    console.error('Signup Error:', err);
 
     res.render('signup', {
-      error: 'Signup failed: ' + err.message
+      error: 'Signup failed'
     });
   }
 });
 
-// ── Logout ───────────────────────────────────
+// ─────────────────────────────────────────────
+// LOGOUT
+// ─────────────────────────────────────────────
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
     res.redirect('/login');
   });
 });
 
-// ── Dashboard ────────────────────────────────
+// ─────────────────────────────────────────────
+// DASHBOARD
+// ─────────────────────────────────────────────
 app.get('/dashboard', requireLogin, (req, res) => {
   try {
-    const user = req.session.user || {};
-    const isAdmin = user.role === 'admin';
-    const greeting = getGreeting();
+    let announcement = null;
+
+    try {
+      announcement = db.prepare(`
+        SELECT * FROM announcements
+        ORDER BY created_at DESC
+        LIMIT 1
+      `).get();
+    } catch {
+      announcement = null;
+    }
 
     res.render('dashboard', {
-      user,
-      isAdmin,
-      greeting
+      user: req.session.user,
+      isAdmin: req.session.user.role === 'admin',
+      greeting: getGreeting(),
+      announcement
     });
 
   } catch (err) {
-    console.error('Dashboard error:', err);
-    res.status(500).send('Dashboard failed to load');
+    console.error('Dashboard Error:', err);
+
+    res.status(500).send(
+      'Dashboard failed to load'
+    );
   }
 });
 
-// ── API Data ─────────────────────────────────
+// ─────────────────────────────────────────────
+// DASHBOARD DATA API
+// ─────────────────────────────────────────────
 app.get('/api/data', requireLogin, (req, res) => {
   try {
     const userId = req.session.user.id;
 
     const projects = db.prepare(`
-      SELECT p.* FROM projects p
+      SELECT DISTINCT p.*
+      FROM projects p
       LEFT JOIN project_members pm
       ON p.id = pm.project_id
       WHERE p.created_by = ?
@@ -155,12 +234,22 @@ app.get('/api/data', requireLogin, (req, res) => {
     `).all(userId, userId);
 
     const tasks = db.prepare(`
-      SELECT t.*, p.name as project_name
+      SELECT
+        t.*,
+        p.name AS project_name,
+        u.username AS assigned_to_name
       FROM tasks t
       LEFT JOIN projects p
       ON t.project_id = p.id
+      LEFT JOIN users u
+      ON t.assigned_to = u.id
       WHERE t.assigned_to = ?
-    `).all(userId);
+      OR t.project_id IN (
+        SELECT project_id
+        FROM project_members
+        WHERE user_id = ?
+      )
+    `).all(userId, userId);
 
     res.json({
       projects: projects || [],
@@ -176,12 +265,15 @@ app.get('/api/data', requireLogin, (req, res) => {
   }
 });
 
-// ── Users API ────────────────────────────────
+// ─────────────────────────────────────────────
+// USERS API
+// ─────────────────────────────────────────────
 app.get('/api/users', requireLogin, (req, res) => {
   try {
-    const users = db.prepare(
-      'SELECT id, username, role FROM users'
-    ).all();
+    const users = db.prepare(`
+      SELECT id, username, email, role
+      FROM users
+    `).all();
 
     res.json(users || []);
 
@@ -194,118 +286,261 @@ app.get('/api/users', requireLogin, (req, res) => {
   }
 });
 
-// ── Projects ─────────────────────────────────
+// ─────────────────────────────────────────────
+// ADMIN ANALYTICS
+// ─────────────────────────────────────────────
+app.get('/api/admin/stats', requireLogin, requireAdmin, (req, res) => {
+  try {
+    const totalUsers = db.prepare(
+      'SELECT COUNT(*) as count FROM users'
+    ).get().count;
+
+    const totalProjects = db.prepare(
+      'SELECT COUNT(*) as count FROM projects'
+    ).get().count;
+
+    const totalTasks = db.prepare(
+      'SELECT COUNT(*) as count FROM tasks'
+    ).get().count;
+
+    const completedTasks = db.prepare(
+      `SELECT COUNT(*) as count
+       FROM tasks
+       WHERE status = 'done'`
+    ).get().count;
+
+    const overdueTasks = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM tasks
+      WHERE due_date IS NOT NULL
+      AND due_date < date('now')
+      AND status != 'done'
+    `).get().count;
+
+    const teamEfficiency =
+      totalTasks === 0
+        ? 0
+        : Math.round(
+            (completedTasks / totalTasks) * 100
+          );
+
+    res.json({
+      totalUsers,
+      totalProjects,
+      totalTasks,
+      overdueTasks,
+      teamEfficiency
+    });
+
+  } catch (err) {
+    console.error('Admin Stats Error:', err);
+
+    res.status(500).json({
+      error: 'Failed to load admin stats'
+    });
+  }
+});
+
+// ─────────────────────────────────────────────
+// PROJECTS
+// ─────────────────────────────────────────────
 app.post('/projects', requireLogin, (req, res) => {
   try {
     const { name } = req.body;
 
-    const result = db.prepare(
-      'INSERT INTO projects (name, created_by) VALUES (?, ?)'
-    ).run(name, req.session.user.id);
+    if (!name) {
+      return res.redirect('/dashboard');
+    }
 
-    db.prepare(
-      'INSERT INTO project_members (project_id, user_id) VALUES (?, ?)'
-    ).run(result.lastInsertRowid, req.session.user.id);
+    const result = db.prepare(`
+      INSERT INTO projects
+      (name, created_by)
+      VALUES (?, ?)
+    `).run(
+      name,
+      req.session.user.id
+    );
+
+    db.prepare(`
+      INSERT INTO project_members
+      (project_id, user_id)
+      VALUES (?, ?)
+    `).run(
+      result.lastInsertRowid,
+      req.session.user.id
+    );
 
     res.redirect('/dashboard');
 
   } catch (err) {
-    console.error('Project creation error:', err);
-    res.status(500).send('Failed to create project');
+    console.error('Project Error:', err);
+
+    res.status(500).send(
+      'Failed to create project'
+    );
   }
 });
 
 app.post('/projects/:id/add-member', requireLogin, (req, res) => {
   try {
     const { username } = req.body;
-    const projectId = req.params.id;
 
-    const user = db.prepare(
-      'SELECT id FROM users WHERE username = ?'
-    ).get(username);
+    const user = db.prepare(`
+      SELECT id
+      FROM users
+      WHERE username = ?
+    `).get(username);
 
     if (user) {
-      db.prepare(
-        'INSERT INTO project_members (project_id, user_id) VALUES (?, ?)'
-      ).run(projectId, user.id);
+      db.prepare(`
+        INSERT INTO project_members
+        (project_id, user_id)
+        VALUES (?, ?)
+      `).run(
+        req.params.id,
+        user.id
+      );
     }
 
     res.redirect('/dashboard');
 
   } catch (err) {
-    console.error('Add member error:', err);
-    res.status(500).send('Failed to add member');
+    console.error('Add Member Error:', err);
+
+    res.status(500).send(
+      'Failed to add member'
+    );
   }
 });
 
-// ── Tasks ────────────────────────────────────
+// ─────────────────────────────────────────────
+// TASKS
+// ─────────────────────────────────────────────
 app.post('/tasks', requireLogin, (req, res) => {
   try {
-    const { title, description, project_id, due_date } = req.body;
+    const {
+      title,
+      description,
+      project_id,
+      assigned_to,
+      due_date,
+      priority
+    } = req.body;
 
     db.prepare(`
       INSERT INTO tasks
-      (title, description, project_id, assigned_to, due_date)
-      VALUES (?, ?, ?, ?, ?)
+      (title, description, project_id, assigned_to, due_date, priority)
+      VALUES (?, ?, ?, ?, ?, ?)
     `).run(
       title,
-      description,
+      description || '',
       project_id || null,
-      req.session.user.id,
-      due_date || null
+      assigned_to || req.session.user.id,
+      due_date || null,
+      priority || 'medium'
     );
 
     res.redirect('/dashboard');
 
   } catch (err) {
-    console.error('Task creation error:', err);
-    res.status(500).send('Failed to create task');
+    console.error('Task Error:', err);
+
+    res.status(500).send(
+      'Failed to create task'
+    );
   }
 });
 
 app.post('/tasks/:id/status', requireLogin, (req, res) => {
   try {
-    db.prepare(
-      'UPDATE tasks SET status = ? WHERE id = ?'
-    ).run(req.body.status, req.params.id);
+    db.prepare(`
+      UPDATE tasks
+      SET status = ?
+      WHERE id = ?
+    `).run(
+      req.body.status,
+      req.params.id
+    );
 
     res.redirect('/dashboard');
 
   } catch (err) {
-    console.error('Task status update error:', err);
-    res.status(500).send('Failed to update task');
+    console.error('Task Status Error:', err);
+
+    res.status(500).send(
+      'Failed to update task'
+    );
   }
 });
 
-// ── Admin ────────────────────────────────────
-app.post('/make-admin/:id', requireLogin, (req, res) => {
+// ─────────────────────────────────────────────
+// ADMIN
+// ─────────────────────────────────────────────
+app.post('/make-admin/:id', requireLogin, requireAdmin, (req, res) => {
   try {
-    if (req.session.user.role !== 'admin') {
-      return res.status(403).send('Forbidden');
+    db.prepare(`
+      UPDATE users
+      SET role = 'admin'
+      WHERE id = ?
+    `).run(req.params.id);
+
+    res.redirect('/dashboard');
+
+  } catch (err) {
+    console.error('Make Admin Error:', err);
+
+    res.status(500).send(
+      'Failed to promote user'
+    );
+  }
+});
+
+app.post('/admin/announcement', requireLogin, requireAdmin, (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message) {
+      return res.redirect('/dashboard');
     }
 
-    db.prepare(
-      'UPDATE users SET role = ? WHERE id = ?'
-    ).run('admin', req.params.id);
+    db.prepare(`
+      INSERT INTO announcements
+      (message, created_by)
+      VALUES (?, ?)
+    `).run(
+      message,
+      req.session.user.id
+    );
 
     res.redirect('/dashboard');
 
   } catch (err) {
-    console.error('Admin update error:', err);
-    res.status(500).send('Failed to update admin');
+    console.error('Announcement Error:', err);
+
+    res.status(500).send(
+      'Failed to create announcement'
+    );
   }
 });
 
-// ── Global Error Handler ─────────────────────
+// ─────────────────────────────────────────────
+// GLOBAL ERROR
+// ─────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error('Global server error:', err);
+  console.error('Global Server Error:', err);
 
-  res.status(500).send('Internal Server Error');
+  res.status(500).send(
+    'Internal Server Error'
+  );
 });
 
-// ── Start Server ─────────────────────────────
+// ─────────────────────────────────────────────
+// START SERVER
+// ─────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(
+    `Server running on port ${PORT}`
+  );
 });
