@@ -1,54 +1,175 @@
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | ASTRA</title>
 
-  try {
-    // Find user by email
-    const user = db.prepare(`
-      SELECT * FROM users WHERE email = ?
-    `).get(email);
-
-    // No user found
-    if (!user) {
-      return res.render('login', {
-        error: 'Invalid email or password'
-      });
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Arial, sans-serif;
     }
 
-    // Password check
-    const validPassword = await bcrypt.compare(password, user.password);
-
-    if (!validPassword) {
-      return res.render('login', {
-        error: 'Invalid email or password'
-      });
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background:
+        radial-gradient(circle at top right, rgba(56,189,248,0.15), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(20,184,166,0.12), transparent 25%),
+        linear-gradient(135deg, #07111F, #0B1D33);
+      color: white;
     }
 
-    // Clean session object
-    req.session.user = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role || 'member'
-    };
+    .card {
+      width: 100%;
+      max-width: 430px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(18px);
+      border-radius: 28px;
+      padding: 42px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+    }
 
-    // Save session before redirect
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session Save Error:', err);
+    .logo {
+      text-align: center;
+      font-size: 40px;
+      font-weight: 900;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #38BDF8, #14B8A6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-        return res.render('login', {
-          error: 'Session failed'
-        });
-      }
+    .subtitle {
+      text-align: center;
+      color: #94A3B8;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
 
-      return res.redirect('/dashboard');
-    });
+    .admin-note {
+      text-align: center;
+      background: rgba(56,189,248,0.12);
+      color: #BAE6FD;
+      padding: 12px;
+      border-radius: 14px;
+      font-size: 13px;
+      margin-bottom: 22px;
+    }
 
-  } catch (err) {
-    console.error('Login Error:', err);
+    .error {
+      background: rgba(239,68,68,0.15);
+      color: #FCA5A5;
+      padding: 12px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+      text-align: center;
+      font-size: 14px;
+    }
 
-    return res.render('login', {
-      error: 'Login failed'
-    });
-  }
-});
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 16px;
+      border: none;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      color: white;
+      font-size: 15px;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #94A3B8;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #38BDF8, #14B8A6);
+      color: white;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      opacity: 0.95;
+    }
+
+    .link {
+      text-align: center;
+      margin-top: 20px;
+      color: #94A3B8;
+      font-size: 14px;
+    }
+
+    .link a {
+      color: #38BDF8;
+      text-decoration: none;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="logo">🌊 ASTRA</div>
+
+    <div class="subtitle">
+      Ocean Command Center Login
+    </div>
+
+    <div class="admin-note">
+      👑 Use <strong>@astra.com</strong> during signup for Admin Command Center access
+    </div>
+
+    <% if (error) { %>
+      <div class="error">
+        <%= error %>
+      </div>
+    <% } %>
+
+    <!-- THIS IS THE CORRECT LOGIN FORM -->
+    <form method="POST" action="/login">
+
+      <!-- MUST BE name="email" -->
+      <input
+        type="email"
+        name="email"
+        placeholder="Enter your email"
+        required
+      >
+
+      <!-- MUST BE name="password" -->
+      <input
+        type="password"
+        name="password"
+        placeholder="Enter your password"
+        required
+      >
+
+      <button type="submit">
+        Login to ASTRA
+      </button>
+
+    </form>
+
+    <div class="link">
+      Don’t have an account?
+      <a href="/signup">Create Account</a>
+    </div>
+  </div>
+
+</body>
+</html>
