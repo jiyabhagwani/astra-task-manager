@@ -1,0 +1,15 @@
+app.post('/signup', async (req, res) => {
+  const { username, password, email } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  
+  // Check if email ends with @astra.com
+  const isAdminEmail = email && email.toLowerCase().endsWith('@astra.com');
+  const role = isAdminEmail ? 'admin' : 'member';
+  
+  db.run('INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?)', 
+    [username, hashedPassword, email, role], 
+    function(err) {
+      if (err) return res.send('Username or email already exists');
+      res.redirect('/login');
+    });
+});

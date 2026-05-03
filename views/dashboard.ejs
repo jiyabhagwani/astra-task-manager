@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ASTRA | Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial;background:#0F172A;color:white}
+.navbar{background:#1E1B4B;padding:16px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #4F46E5}
+.logo{font-size:24px;font-weight:bold;color:#4F46E5}
+.container{padding:32px;max-width:1400px;margin:0 auto}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:32px}
+.stat-card{background:#1E1B4B;border-radius:16px;padding:24px;text-align:center}
+.stat-value{font-size:36px;font-weight:bold;color:#4F46E5}
+.card{background:#1E1B4B;border-radius:16px;padding:24px;margin-bottom:24px}
+input,select,textarea{width:100%;padding:12px;margin:10px 0;border-radius:8px;border:none;background:#0F172A;color:white}
+button{background:#4F46E5;color:white;padding:12px 24px;border:none;border-radius:8px;cursor:pointer}
+button:hover{background:#6366F1}
+.task{background:#0F172A;border-radius:12px;padding:16px;margin-bottom:12px}
+.task-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.badge{padding:4px 12px;border-radius:20px;font-size:12px}
+.badge.pending{background:#F59E0B}
+.badge.in_progress{background:#06B6D4}
+.badge.done{background:#10B981}
+.priority-high{background:#EF4444;padding:2px 8px;border-radius:12px;font-size:10px;margin-left:8px}
+.priority-medium{background:#F59E0B;padding:2px 8px;border-radius:12px;font-size:10px;margin-left:8px}
+.priority-low{background:#10B981;padding:2px 8px;border-radius:12px;font-size:10px;margin-left:8px}
+.overdue{background:#EF4444;padding:2px 8px;border-radius:12px;font-size:11px;margin-left:8px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.admin-panel{border:1px solid #4F46E5;margin-top:24px}
+.user-row{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #333}
+.search-box{padding:12px;margin-bottom:20px}
+.search-box input{background:#1E1B4B}
+.greeting{font-size:14px;color:#94A3B8}
+.productivity-score{background:#4F46E5;border-radius:12px;padding:20px;text-align:center}
+.score-value{font-size:48px;font-weight:bold}
+.welcome-card{background:linear-gradient(135deg,#4F46E5,#9333EA);border-radius:16px;padding:24px;margin-bottom:24px}
+.project-card{background:#0F172A;border-radius:12px;padding:15px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.health-on{background:#10B981;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:bold}
+.health-risk{background:#F59E0B;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:bold}
+.health-delayed{background:#EF4444;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:bold}
+.activity-item{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #333}
+.activity-icon{font-size:20px}
+.motivation-card{background:linear-gradient(135deg,#1E1B4B,#0F172A);border-radius:16px;padding:20px;text-align:center;border:1px solid #4F46E5}
+.footer{text-align:center;padding:30px;color:#94A3B8;font-size:12px;border-top:1px solid #333;margin-top:30px}
+.empty-state{text-align:center;padding:40px;color:#94A3B8}
+</style>
+</head>
+<body>
+<nav class="navbar">
+<div class="logo">✨ ASTRA</div>
+<div><span class="greeting"><%= greeting %>, <%= user.username %></span> <span style="background:#4F46E5;padding:4px 12px;border-radius:20px;margin-left:10px"><%= user.role %></span>
+<a href="/logout" style="color:white;margin-left:20px">Logout</a></div>
+</nav>
+
+<div class="container">
+<div class="welcome-card">
+<h2>👋 Welcome to ASTRA, <%= user.username %>!</h2>
+<p style="margin-top:8px;opacity:0.9">Built for high-performance teams. Trusted by builders.</p>
+</div>
+
+<div class="motivation-card" id="motivationWidget">✨ Loading...</div>
+
+<div class="stats-grid">
+<div class="stat-card"><div class="stat-value" id="totalTasks">0</div><div>Total Tasks</div></div>
+<div class="stat-card"><div class="stat-value" id="completedTasks">0</div><div>Completed</div></div>
+<div class="stat-card"><div class="stat-value" id="pendingTasks">0</div><div>Pending</div></div>
+<div class="stat-card"><div class="stat-value" id="overdueCount">0</div><div>Overdue</div></div>
+</div>
+
+<div class="productivity-score"><div class="score-value" id="productivityScore">0%</div><div>Your Productivity Score</div></div>
+<div class="productivity-score" style="background:#6366F1;margin-top:12px"><div class="score-value" id="teamScore">0%</div><div>Team Efficiency</div></div>
+
+<div class="card"><div class="progress-bar-container" style="background:#333;border-radius:10px;height:10px"><div id="progressBar" style="background:#4F46E5;width:0%;height:10px;border-radius:10px"></div></div></div>
+
+<div class="search-box"><input type="text" id="searchInput" placeholder="🔍 Search tasks..." onkeyup="searchTasks()"></div>
+
+<div class="grid-2">
+<div class="card">
+<h3>📁 Projects</h3>
+<% if(isAdmin) { %>
+<form id="projectForm"><input type="text" id="projectName" placeholder="Project name"><button type="submit">+ Create</button></form>
+<% } %>
+<div id="projectList"></div>
+</div>
+
+<div class="card">
+<h3>➕ Assign Task</h3>
+<form id="taskForm">
+<input type="text" id="taskTitle" placeholder="Task title">
+<textarea id="taskDesc" placeholder="Description" rows="3"></textarea>
+<select id="taskProject"><option>Select Project</option></select>
+<select id="assignedTo"><option>Assign To</option></select>
+<select id="priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+<input type="date" id="taskDueDate">
+<button type="submit">+ Assign</button>
+</form>
+</div>
+</div>
+
+<div class="card"><h3>📋 Recent Activity</h3><div id="activityList"></div></div>
+<div class="card"><h3>📋 My Tasks</h3><div id="tasksList"></div></div>
+
+<% if(isAdmin) { %>
+<div class="card admin-panel">
+<h3>👑 Admin Panel</h3>
+<form method="POST" action="/projects/1/add-member">
+<select name="project_id" id="adminProjectSelect"></select>
+<input type="text" name="username" placeholder="Username">
+<button type="submit">Add to Project</button>
+</form>
+<h4>All Users | Team: <span id="teamCount">0</span></h4>
+<div id="allUsersList"></div>
+</div>
+<% } %>
+
+<div class="footer">Built with precision by Jiya Bhagwani ✨ | ASTRA</div>
+</div>
+
+<script>
+let allTasks=[], allProjects=[], allUsers=[];
+function loadData(){
+  fetch('/api/data').then(r=>r.json()).then(d=>{allTasks=d.tasks||[]; allProjects=d.projects||[]; updateStats(); renderProjects(); renderTasks(); updateMotivation(); updateTeamScore(); updateActivity();});
+  fetch('/api/users').then(r=>r.json()).then(u=>{allUsers=u; updateAssignDropdown(); if(document.getElementById('teamCount'))document.getElementById('teamCount').innerText=allUsers.length;});
+}
+function updateStats(){
+  let total=allTasks.length, completed=allTasks.filter(t=>t.status==='done').length, pending=total-completed, overdue=allTasks.filter(t=>t.due_date&&new Date(t.due_date)<new Date()&&t.status!=='done').length, percent=total===0?0:(completed/total)*100;
+  document.getElementById('totalTasks').innerText=total; document.getElementById('completedTasks').innerText=completed; document.getElementById('pendingTasks').innerText=pending; document.getElementById('overdueCount').innerText=overdue;
+  document.getElementById('progressBar').style.width=percent+'%'; document.getElementById('productivityScore').innerText=Math.round(percent)+'%';
+}
+function updateTeamScore(){let total=allTasks.length, completed=allTasks.filter(t=>t.status==='done').length, percent=total===0?0:(completed/total)*100; document.getElementById('teamScore').innerText=Math.round(percent)+'%';}
+function updateMotivation(){let p=allTasks.filter(t=>t.status!=='done').length; document.getElementById('motivationWidget').innerHTML=p===0?'🎉 Perfect! All done!' : `✨ ${p} task${p!==1?'s':''} pending — let's ship! 🚀`;}
+function updateActivity(){let acts=[]; allTasks.slice(-5).forEach(t=>{acts.unshift(`${t.assigned_to_name||'Someone'} ${t.status==='done'?'completed ✅':'updated'} "${t.title}"`);}); if(!acts.length)acts=['✨ No activity yet']; document.getElementById('activityList').innerHTML=acts.map(a=>`<div class="activity-item"><span>📌</span><span>${escapeHtml(a)}</span></div>`).join('');}
+function getHealth(pid){let pts=allTasks.filter(t=>t.project_id==pid); if(!pts.length)return '🟢 On Track'; if(pts.some(t=>t.due_date&&new Date(t.due_date)<new Date()&&t.status!=='done'))return '🔴 Delayed'; if(pts.some(t=>t.due_date&&new Date(t.due_date)-new Date()<86400000&&t.status!=='done'))return '🟡 At Risk'; return '🟢 On Track';}
+function renderProjects(){
+  let c=document.getElementById('projectList'); if(!allProjects.length){c.innerHTML='<div>No projects</div>';return;}
+  c.innerHTML=allProjects.map(p=>`<div class="project-card"><div>📌 ${escapeHtml(p.name)}</div><div><span class="health-on">${getHealth(p.id)}</span></div></div>`).join('');
+  let o='<option>Select</option>'+allProjects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  document.getElementById('taskProject').innerHTML=o; if(document.getElementById('adminProjectSelect'))document.getElementById('adminProjectSelect').innerHTML=o;
+}
+function updateAssignDropdown(){let o='<option>Assign To</option>'+allUsers.map(u=>`<option value="${u.id}">👤 ${escapeHtml(u.username)}</option>`).join(''); document.getElementById('assignedTo').innerHTML=o;}
+function renderTasks(){
+  let c=document.getElementById('tasksList'); if(!allTasks.length){c.innerHTML='<div>No tasks</div>';return;}
+  c.innerHTML=allTasks.map(t=>{let isOverdue=t.due_date&&new Date(t.due_date)<new Date()&&t.status!=='done'; return `<div class="task"><div class="task-header"><div><strong>${escapeHtml(t.title)}</strong> <span class="badge ${t.status}">${t.status}</span>${isOverdue?'<span class="overdue">OVERDUE</span>':''}</div><form method="POST" action="/tasks/${t.id}/status"><select name="status" onchange="this.form.submit()"><option value="pending" ${t.status==='pending'?'selected':''}>Pending</option><option value="in_progress" ${t.status==='in_progress'?'selected':''}>In Progress</option><option value="done" ${t.status==='done'?'selected':''}>Done</option></select></form></div><div>📁 ${escapeHtml(t.project_name||'No project')} | 👤 ${escapeHtml(t.assigned_to_name||'Unassigned')}${t.due_date?' | 📅 '+t.due_date:''}</div>${t.description?'<div>'+escapeHtml(t.description)+'</div>':''}</div>`;}).join('');
+}
+function searchTasks(){let term=document.getElementById('searchInput').value.toLowerCase(); document.querySelectorAll('.task').forEach(t=>{t.style.display=t.innerText.toLowerCase().includes(term)?'block':'none';});}
+function escapeHtml(s){if(!s)return '';return s.replace(/[&<>]/g,m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');}
+document.getElementById('projectForm')?.addEventListener('submit',function(e){e.preventDefault(); fetch('/projects',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'name='+encodeURIComponent(document.getElementById('projectName').value)}).then(()=>location.reload());});
+document.getElementById('taskForm')?.addEventListener('submit',function(e){e.preventDefault(); let fd=new URLSearchParams(); fd.append('title',document.getElementById('taskTitle').value); fd.append('description',document.getElementById('taskDesc').value); fd.append('project_id',document.getElementById('taskProject').value); fd.append('assigned_to',document.getElementById('assignedTo').value); fd.append('priority',document.getElementById('priority').value); fd.append('due_date',document.getElementById('taskDueDate').value); fetch('/tasks',{method:'POST',body:fd}).then(()=>location.reload());});
+loadData();
+<% if(isAdmin) { %>fetch('/api/users').then(r=>r.json()).then(u=>{if(document.getElementById('allUsersList')){document.getElementById('allUsersList').innerHTML=u.map(uu=>`<div class="user-row"><span>👤 ${escapeHtml(uu.username)}<br><small>${escapeHtml(uu.email)}</small></span>${uu.role!=='admin'?'<form method="POST" action="/make-admin/'+uu.id+'" style="margin:0"><button>✨ Promote</button></form>':'<span>👑</span>'}</div>`).join('');}});<% } %>
+</script>
+</body>
+</html>

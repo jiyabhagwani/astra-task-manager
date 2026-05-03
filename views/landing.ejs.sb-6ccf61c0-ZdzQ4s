@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ASTRA | Premium Task Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #0F172A 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .orb-1 {
+      width: 400px;
+      height: 400px;
+      background: rgba(79, 70, 229, 0.3);
+      top: -100px;
+      right: -100px;
+      animation: float 20s ease-in-out infinite;
+    }
+
+    .orb-2 {
+      width: 500px;
+      height: 500px;
+      background: rgba(139, 92, 246, 0.2);
+      bottom: -150px;
+      left: -150px;
+      animation: float 25s ease-in-out infinite reverse;
+    }
+
+    .orb-3 {
+      width: 300px;
+      height: 300px;
+      background: rgba(6, 182, 212, 0.15);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(30px, 30px); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+      50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.3); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navbar */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #4F46E5, #9333EA);
+      border-radius: 10px;
+      transform: rotate(45deg);
+      animation: spinLogo 0.5s ease;
+    }
+
+    @keyframes spinLogo {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(45deg); }
+    }
+
+    .logo-text {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #94A3B8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-outline {
+      padding: 10px 24px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-outline:hover {
+      border-color: #4F46E5;
+      background: rgba(79,70,229,0.1);
+    }
+
+    .btn-primary {
+      padding: 10px 24px;
+      background: linear-gradient(135deg, #4F46E5, #9333EA);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(79,70,229,0.3);
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 80px 0 60px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 40px;
+      font-size: 14px;
+      color: #94A3B8;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 64px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #FFFFFF, #94A3B8, #4F46E5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 24px;
+      line-height: 1.2;
+    }
+
+    .subheadline {
+      font-size: 20px;
+      color: #94A3B8;
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+
+    /* Features */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      padding: 60px 0;
+    }
+
+    .feature-card {
+      padding: 32px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 20px;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(79,70,229,0.5);
+      transform: translateY(-5px);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .feature-icon {
+      font-size: 40px;
+      margin-bottom: 20px;
+    }
+
+    .feature-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 12px;
+    }
+
+    .feature-desc {
+      color: #94A3B8;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 40px; }
+      .features { grid-template-columns: 1fr; }
+      .navbar { flex-direction: column; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <div class="container">
+    <nav class="navbar">
+      <div class="logo">
+        <div class="logo-icon"></div>
+        <span class="logo-text">ASTRA</span>
+      </div>
+      <div class="nav-buttons">
+        <a href="/login" class="btn-outline">Login</a>
+        <a href="/signup" class="btn-primary">Get Started →</a>
+      </div>
+    </nav>
+
+    <div class="hero">
+      <div class="badge">
+        ⚡ Trusted by 500+ teams
+      </div>
+      <h1>
+        Manage Projects.<br>
+        <span style="background: linear-gradient(135deg, #4F46E5, #9333EA); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Empower Teams.</span>
+      </h1>
+      <p class="subheadline">
+        Premium productivity platform for modern teams. Ship faster, track smarter, lead with clarity.
+      </p>
+      <a href="/signup" class="btn-primary" style="padding: 14px 32px; font-size: 16px;">
+        Start Free Trial →
+      </a>
+    </div>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-title">Project Intelligence</div>
+        <div class="feature-desc">AI-powered insights to keep your team on track and ahead of deadlines.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Lightning Fast</div>
+        <div class="feature-desc">Optimized workflow that feels instant. No lag, no delays.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Bank-Grade Security</div>
+        <div class="feature-desc">Your data is encrypted and safe with enterprise-grade protection.</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

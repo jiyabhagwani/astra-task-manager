@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASTRA | Premium Task Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #0F172A 100%); min-height: 100vh; }
+    .orb { position: fixed; border-radius: 50%; filter: blur(100px); z-index: 0; pointer-events: none; }
+    .orb-1 { width: 500px; height: 500px; background: rgba(79,70,229,0.3); top: -200px; right: -100px; animation: float1 20s ease-in-out infinite; }
+    .orb-2 { width: 600px; height: 600px; background: rgba(139,92,246,0.2); bottom: -200px; left: -150px; animation: float2 25s ease-in-out infinite; }
+    @keyframes float1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(50px,50px); } }
+    @keyframes float2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-50px,-50px); } }
+    .container { position: relative; z-index: 10; max-width: 500px; margin: 0 auto; padding: 40px 20px; }
+    .logo { text-align: center; margin-bottom: 40px; }
+    .logo-icon { width: 50px; height: 50px; background: linear-gradient(135deg, #4F46E5, #9333EA); border-radius: 15px; transform: rotate(45deg); margin: 0 auto 15px; }
+    .logo-text { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #fff, #94A3B8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .auth-card { background: rgba(30,27,75,0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 32px; padding: 40px; }
+    .tabs { display: flex; gap: 16px; margin-bottom: 32px; }
+    .tab { flex: 1; text-align: center; padding: 12px; background: transparent; border: none; color: #94A3B8; font-size: 18px; font-weight: 600; cursor: pointer; border-radius: 12px; }
+    .tab.active { background: linear-gradient(135deg, #4F46E5, #9333EA); color: white; }
+    .form-group { margin-bottom: 24px; }
+    .form-group input { width: 100%; padding: 14px 18px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; color: white; font-size: 16px; }
+    .form-group input:focus { outline: none; border-color: #4F46E5; }
+    .auth-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #4F46E5, #9333EA); border: none; border-radius: 16px; color: white; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .auth-btn:hover { transform: translateY(-2px); }
+    .admin-note { text-align: center; margin-top: 20px; padding: 12px; background: rgba(79,70,229,0.1); border-radius: 12px; font-size: 12px; color: #94A3B8; }
+  </style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="container">
+<div class="logo"><div class="logo-icon"></div><div class="logo-text">ASTRA</div></div>
+
+<div class="auth-card">
+<div class="tabs">
+<button class="tab active" onclick="showTab('login')">Login</button>
+<button class="tab" onclick="showTab('signup')">Sign Up</button>
+</div>
+
+<div id="loginForm">
+<form method="POST" action="/login">
+<div class="form-group"><input type="email" name="email" placeholder="Email address" required></div>
+<div class="form-group"><input type="password" name="password" placeholder="Password" required></div>
+<button type="submit" class="auth-btn">Login →</button>
+</form>
+<div class="admin-note">🔐 Use @astra.com email for Admin access</div>
+</div>
+
+<div id="signupForm" style="display: none;">
+<form method="POST" action="/signup">
+<div class="form-group"><input type="email" name="email" placeholder="Email address" required></div>
+<div class="form-group"><input type="text" name="username" placeholder="Username" required></div>
+<div class="form-group"><input type="password" name="password" placeholder="Password" required></div>
+<button type="submit" class="auth-btn">Create Account →</button>
+</form>
+<div class="admin-note">✨ Users with @astra.com email become Admins automatically!</div>
+</div>
+</div>
+</div>
+
+<script>
+function showTab(tab) {
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
+  const tabs = document.querySelectorAll('.tab');
+  if (tab === 'login') {
+    loginForm.style.display = 'block';
+    signupForm.style.display = 'none';
+    tabs[0].classList.add('active');
+    tabs[1].classList.remove('active');
+  } else {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
+    tabs[0].classList.remove('active');
+    tabs[1].classList.add('active');
+  }
+}
+</script>
+</body>
+</html>
