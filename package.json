@@ -1,24 +1,17 @@
 {
-  "name": "taskmanager",
+  "name": "astra-task-manager",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "ASTRA - Team Productivity Platform",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "bcrypt": "^6.0.0",
-    "cookie-parser": "^1.4.7",
-    "ejs": "^5.0.2",
-    "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "sqlite3": "^6.0.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.14"
+    "express": "^4.18.2",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "cookie-parser": "^1.4.6",
+    "sqlite3": "^5.1.6",
+    "ejs": "^3.1.9"
   }
 }

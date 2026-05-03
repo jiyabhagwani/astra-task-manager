@@ -1,0 +1,5 @@
+node_modules/
+taskmanager.db
+.env
+.DS_Store
+*.log
