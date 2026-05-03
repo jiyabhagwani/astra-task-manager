@@ -11,9 +11,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
+// FIXED: Better database connection for Railway
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+});
+
+// Test database connection
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('Database connection error:', err.message);
+  } else {
+    console.log('Database connected successfully');
+    release();
+  }
 });
 
 // Create tables
@@ -83,6 +94,7 @@ app.post('/signup', async (req, res) => {
     );
     res.redirect('/login');
   } catch (err) {
+    console.error('Signup error:', err.message);
     res.send('Error creating account: ' + err.message);
   }
 });
@@ -99,6 +111,7 @@ app.post('/login', async (req, res) => {
     res.cookie('token', token, { httpOnly: true });
     res.redirect('/dashboard');
   } catch (err) {
+    console.error('Login error:', err.message);
     res.send('Login error: ' + err.message);
   }
 });
@@ -151,6 +164,7 @@ app.get('/dashboard', async (req, res) => {
       });
     }
   } catch (err) {
+    console.error('Dashboard error:', err.message);
     res.redirect('/login');
   }
 });
