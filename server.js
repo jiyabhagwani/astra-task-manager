@@ -10,10 +10,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// PostgreSQL connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/taskmanager',
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 // Create tables
@@ -25,18 +24,15 @@ pool.query(`
     password TEXT,
     role TEXT DEFAULT 'member'
   );
-  
   CREATE TABLE IF NOT EXISTS projects (
     id SERIAL PRIMARY KEY,
     name TEXT,
     created_by INTEGER
   );
-  
   CREATE TABLE IF NOT EXISTS project_members (
     project_id INTEGER,
     user_id INTEGER
   );
-  
   CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL PRIMARY KEY,
     title TEXT,
@@ -48,7 +44,7 @@ pool.query(`
     assigned_to INTEGER,
     created_by INTEGER
   );
-`).then(() => console.log('Database ready')).catch(err => console.log('DB Error:', err.message));
+`).then(() => console.log('Database ready')).catch(console.error);
 
 function getGreeting() {
   const hour = new Date().getHours();
