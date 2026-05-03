@@ -11,16 +11,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// FIXED: Better database connection for Railway
+// CRITICAL FIX: Force Railway to use the correct database URL
+const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/taskdb';
+console.log('Using database URL:', databaseUrl.replace(/:[^:]*@/, ':****@'));
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  connectionString: databaseUrl,
+  ssl: databaseUrl.includes('railway') ? { rejectUnauthorized: false } : false,
 });
 
-// Test database connection
+// Test connection immediately
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('Database connection error:', err.message);
+    console.error('Database connection FAILED:', err.message);
   } else {
     console.log('Database connected successfully');
     release();
@@ -85,13 +88,17 @@ app.get('/signup', (req, res) => {
 
 app.post('/signup', async (req, res) => {
   const { username, password, email } = req.body;
+  console.log('Signup attempt for:', email);
+  
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const role = email && email.toLowerCase().endsWith('@astra.com') ? 'admin' : 'member';
+    
     await pool.query(
       'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4)',
       [username, email, hashedPassword, role]
     );
+    console.log('Signup successful for:', email);
     res.redirect('/login');
   } catch (err) {
     console.error('Signup error:', err.message);
@@ -101,14 +108,19 @@ app.post('/signup', async (req, res) => {
 
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  console.log('Login attempt for:', email);
+  
   try {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
     if (!user) return res.send('User not found');
+    
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.send('Invalid password');
+    
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role, email: user.email }, process.env.JWT_SECRET || 'secret');
     res.cookie('token', token, { httpOnly: true });
+    console.log('Login successful for:', email);
     res.redirect('/dashboard');
   } catch (err) {
     console.error('Login error:', err.message);
