@@ -1,10 +1,13 @@
 {
   "name": "astra-task-manager",
   "version": "1.0.0",
-  "description": "Team Task Manager with RBAC",
+  "description": "Ocean-grade ASTRA task manager",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
+  },
+  "engines": {
+    "node": "20.x"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
