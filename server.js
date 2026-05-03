@@ -1,107 +1,79 @@
-require("dotenv").config();
-
-const express = require("express");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const cookieParser = require("cookie-parser");
-const { Pool } = require("pg");
-const path = require("path");
+const express = require('express');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
+const { Pool } = require('pg');
+const path = require('path');
 
 const app = express();
-
-/* =========================
-   APP CONFIG
-========================= */
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
-
+app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "public")));
 
-/* =========================
-   ENV VALIDATION
-========================= */
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is not set. Add it in Railway Variables.");
+// Get database URL from environment
+const databaseUrl = process.env.DATABASE_URL;
+console.log('DATABASE_URL exists:', !!databaseUrl);
+
+if (!databaseUrl) {
+  console.error('FATAL: DATABASE_URL environment variable is not set!');
+  process.exit(1);
 }
 
-if (!process.env.JWT_SECRET) {
-  console.warn("JWT_SECRET missing. Using fallback secret (not recommended for production).");
-}
-
-/* =========================
-   DATABASE CONFIG (RAILWAY SAFE)
-========================= */
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  connectionString: databaseUrl,
+  ssl: { rejectUnauthorized: false }
 });
 
-console.log("Connecting to Railway PostgreSQL...");
-
+// Test connection
 pool.connect((err, client, release) => {
   if (err) {
-    console.error("DATABASE CONNECTION FAILED:", err.message);
+    console.error('Database connection FAILED:', err.message);
   } else {
-    console.log("DATABASE CONNECTED SUCCESSFULLY");
+    console.log('Database connected successfully');
     release();
   }
 });
 
-/* =========================
-   INIT DATABASE
-========================= */
+// Create tables
 async function initDB() {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
+        username TEXT UNIQUE,
+        email TEXT UNIQUE,
+        password TEXT,
         role TEXT DEFAULT 'member'
       );
-
       CREATE TABLE IF NOT EXISTS projects (
         id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        created_by INTEGER REFERENCES users(id) ON DELETE CASCADE
+        name TEXT,
+        created_by INTEGER
       );
-
       CREATE TABLE IF NOT EXISTS project_members (
-        project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        PRIMARY KEY (project_id, user_id)
+        project_id INTEGER,
+        user_id INTEGER
       );
-
       CREATE TABLE IF NOT EXISTS tasks (
         id SERIAL PRIMARY KEY,
-        title TEXT NOT NULL,
+        title TEXT,
         description TEXT,
         status TEXT DEFAULT 'pending',
         priority TEXT DEFAULT 'medium',
         due_date TEXT,
-        project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-        assigned_to INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        created_by INTEGER REFERENCES users(id) ON DELETE CASCADE
+        project_id INTEGER,
+        assigned_to INTEGER,
+        created_by INTEGER
       );
     `);
-
-    console.log("DATABASE TABLES READY");
+    console.log('Tables ready');
   } catch (err) {
-    console.error("DATABASE INIT ERROR:", err.message);
+    console.error('Table error:', err.message);
   }
 }
-
 initDB();
 
-/* =========================
-   HELPERS
-========================= */
 function getGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good Morning";
@@ -109,340 +81,199 @@ function getGreeting() {
   return "Good Evening";
 }
 
-function authMiddleware(req, res, next) {
-  const token = req.cookies.token;
+app.get('/', (req, res) => res.render('landing'));
 
-  if (!token) return res.redirect("/login");
-
-  try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret");
-    next();
-  } catch {
-    return res.redirect("/login");
-  }
-}
-
-function adminMiddleware(req, res, next) {
-  if (req.user.role !== "admin") {
-    return res.send("Admin access only.");
-  }
-  next();
-}
-
-/* =========================
-   ROUTES
-========================= */
-app.get("/", (req, res) => {
-  res.render("landing");
+app.get('/login', (req, res) => {
+  res.render('login');
 });
 
-/* ---------- AUTH ---------- */
-app.get("/signup", (req, res) => {
-  res.render("signup");
+app.get('/signup', (req, res) => {
+  res.render('signup');
 });
 
-app.post("/signup", async (req, res) => {
-  const { username, email, password } = req.body;
-
-  if (!username || !email || !password) {
-    return res.send("All fields are required.");
-  }
-
+app.post('/signup', async (req, res) => {
+  const { username, password, email } = req.body;
+  console.log('Signup attempt:', email);
+  
   try {
-    const existingUser = await pool.query(
-      "SELECT * FROM users WHERE email = $1 OR username = $2",
-      [email, username]
-    );
-
-    if (existingUser.rows.length > 0) {
-      return res.send("User already exists.");
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // First user becomes admin automatically
-    const userCount = await pool.query("SELECT COUNT(*) FROM users");
-    const role = parseInt(userCount.rows[0].count) === 0 ? "admin" : "member";
-
+    const role = email && email.toLowerCase().endsWith('@astra.com') ? 'admin' : 'member';
+    
     await pool.query(
-      "INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4)",
+      'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4)',
       [username, email, hashedPassword, role]
     );
-
-    console.log(`Signup successful: ${email}`);
-    res.redirect("/login");
+    console.log('Signup successful:', email);
+    res.redirect('/login');
   } catch (err) {
-    console.error("SIGNUP ERROR:", err.message);
-    res.send("Signup failed: " + err.message);
+    console.error('Signup error:', err.message);
+    res.send('Error creating account: ' + err.message);
   }
 });
 
-app.get("/login", (req, res) => {
-  res.render("login");
-});
-
-app.post("/login", async (req, res) => {
+app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-
+  console.log('Login attempt:', email);
+  
   try {
-    const result = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
-    );
-
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
-
-    if (!user) return res.send("User not found.");
-
-    const validPassword = await bcrypt.compare(password, user.password);
-
-    if (!validPassword) return res.send("Invalid password.");
-
-    const token = jwt.sign(
-      {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        email: user.email,
-      },
-      process.env.JWT_SECRET || "fallback_secret",
-      { expiresIn: "7d" }
-    );
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-    });
-
-    console.log(`Login successful: ${email}`);
-    res.redirect("/dashboard");
+    if (!user) return res.send('User not found');
+    
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.send('Invalid password');
+    
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role, email: user.email }, process.env.JWT_SECRET || 'secret');
+    res.cookie('token', token, { httpOnly: true });
+    console.log('Login successful:', email);
+    res.redirect('/dashboard');
   } catch (err) {
-    console.error("LOGIN ERROR:", err.message);
-    res.send("Login failed: " + err.message);
+    console.error('Login error:', err.message);
+    res.send('Login error: ' + err.message);
   }
 });
 
-/* ---------- DASHBOARD ---------- */
-app.get("/dashboard", authMiddleware, async (req, res) => {
+app.get('/dashboard', async (req, res) => {
+  const token = req.cookies.token;
+  if (!token) return res.redirect('/login');
+  
   try {
-    const user = req.user;
+    const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const isAdmin = user.role === 'admin';
     const greeting = getGreeting();
-    const isAdmin = user.role === "admin";
-
-    let projectsResult;
-    let tasksResult;
-    let usersResult = { rows: [] };
-
+    
     if (isAdmin) {
-      projectsResult = await pool.query("SELECT * FROM projects");
-
-      tasksResult = await pool.query(`
-        SELECT t.*, 
-               p.name AS project_name,
-               u.username AS assigned_to_name
-        FROM tasks t
-        LEFT JOIN projects p ON t.project_id = p.id
-        LEFT JOIN users u ON t.assigned_to = u.id
-      `);
-
-      usersResult = await pool.query(
-        "SELECT id, username, email, role FROM users"
-      );
+      const projectsResult = await pool.query('SELECT * FROM projects');
+      const tasksResult = await pool.query('SELECT t.*, p.name as project_name, u.username as assigned_to_name FROM tasks t LEFT JOIN projects p ON t.project_id = p.id LEFT JOIN users u ON t.assigned_to = u.id');
+      const usersResult = await pool.query('SELECT id, username, email, role FROM users');
+      const overdue = tasksResult.rows.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done');
+      const totalTasks = tasksResult.rows.length;
+      const completedTasks = tasksResult.rows.filter(t => t.status === 'done').length;
+      const productivityScore = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+      
+      res.render('dashboard', { 
+        user, 
+        projects: projectsResult.rows, 
+        tasks: tasksResult.rows, 
+        overdue,
+        isAdmin: true,
+        allUsers: usersResult.rows,
+        greeting,
+        productivityScore
+      });
     } else {
-      projectsResult = await pool.query(`
-        SELECT p.*
-        FROM projects p
-        JOIN project_members pm ON p.id = pm.project_id
-        WHERE pm.user_id = $1
-      `, [user.id]);
-
-      tasksResult = await pool.query(`
-        SELECT t.*, 
-               p.name AS project_name,
-               u.username AS assigned_to_name
-        FROM tasks t
-        LEFT JOIN projects p ON t.project_id = p.id
-        LEFT JOIN users u ON t.assigned_to = u.id
-        WHERE t.assigned_to = $1
-      `, [user.id]);
+      const projectsResult = await pool.query('SELECT p.* FROM projects p JOIN project_members pm ON p.id = pm.project_id WHERE pm.user_id = $1', [user.id]);
+      const tasksResult = await pool.query('SELECT t.*, p.name as project_name, u.username as assigned_to_name FROM tasks t LEFT JOIN projects p ON t.project_id = p.id LEFT JOIN users u ON t.assigned_to = u.id WHERE t.assigned_to = $1', [user.id]);
+      const overdue = tasksResult.rows.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done');
+      const totalTasks = tasksResult.rows.length;
+      const completedTasks = tasksResult.rows.filter(t => t.status === 'done').length;
+      const productivityScore = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+      
+      res.render('dashboard', { 
+        user, 
+        projects: projectsResult.rows, 
+        tasks: tasksResult.rows, 
+        overdue,
+        isAdmin: false,
+        allUsers: [],
+        greeting,
+        productivityScore
+      });
     }
-
-    const overdue = tasksResult.rows.filter(
-      task =>
-        task.due_date &&
-        new Date(task.due_date) < new Date() &&
-        task.status !== "done"
-    );
-
-    const totalTasks = tasksResult.rows.length;
-    const completedTasks = tasksResult.rows.filter(
-      task => task.status === "done"
-    ).length;
-
-    const productivityScore =
-      totalTasks === 0
-        ? 0
-        : Math.round((completedTasks / totalTasks) * 100);
-
-    res.render("dashboard", {
-      user,
-      projects: projectsResult.rows,
-      tasks: tasksResult.rows,
-      overdue,
-      isAdmin,
-      allUsers: usersResult.rows,
-      greeting,
-      productivityScore,
-    });
   } catch (err) {
-    console.error("DASHBOARD ERROR:", err.message);
-    res.redirect("/login");
+    console.error('Dashboard error:', err.message);
+    res.redirect('/login');
   }
 });
 
-/* ---------- PROJECTS ---------- */
-app.post("/projects", authMiddleware, adminMiddleware, async (req, res) => {
+app.post('/projects', async (req, res) => {
+  const token = req.cookies.token;
+  const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+  if (user.role !== 'admin') return res.send('Only admins can create projects');
+  
+  const result = await pool.query('INSERT INTO projects (name, created_by) VALUES ($1, $2) RETURNING id', [req.body.name, user.id]);
+  await pool.query('INSERT INTO project_members (project_id, user_id) VALUES ($1, $2)', [result.rows[0].id, user.id]);
+  res.redirect('/dashboard');
+});
+
+app.post('/tasks', async (req, res) => {
+  const token = req.cookies.token;
+  const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+  const assignedTo = req.body.assigned_to || user.id;
+  const priority = req.body.priority || 'medium';
+  
+  await pool.query('INSERT INTO tasks (title, description, due_date, assigned_to, project_id, created_by, priority) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+    [req.body.title, req.body.description, req.body.due_date, assignedTo, req.body.project_id, user.id, priority]);
+  res.redirect('/dashboard');
+});
+
+app.post('/tasks/:id/status', async (req, res) => {
+  await pool.query('UPDATE tasks SET status = $1 WHERE id = $2', [req.body.status, req.params.id]);
+  res.redirect('/dashboard');
+});
+
+app.post('/projects/:id/add-member', async (req, res) => {
+  const token = req.cookies.token;
+  const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+  if (user.role !== 'admin') return res.send('Admin only');
+  
+  const result = await pool.query('SELECT id FROM users WHERE username = $1', [req.body.username]);
+  if (result.rows[0]) {
+    await pool.query('INSERT INTO project_members (project_id, user_id) VALUES ($1, $2)', [req.params.id, result.rows[0].id]);
+  }
+  res.redirect('/dashboard');
+});
+
+app.post('/make-admin/:id', async (req, res) => {
+  const token = req.cookies.token;
+  const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+  if (user.role !== 'admin') return res.send('Admin only');
+  
+  await pool.query('UPDATE users SET role = $1 WHERE id = $2', ['admin', req.params.id]);
+  res.redirect('/dashboard');
+});
+
+app.get('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.redirect('/login');
+});
+
+app.get('/api/data', async (req, res) => {
+  const token = req.cookies.token;
+  if (!token) return res.json({ error: 'Unauthorized' });
+  
   try {
-    const { name } = req.body;
-
-    if (!name) return res.send("Project name required.");
-
-    const result = await pool.query(
-      "INSERT INTO projects (name, created_by) VALUES ($1, $2) RETURNING id",
-      [name, req.user.id]
-    );
-
-    await pool.query(
-      "INSERT INTO project_members (project_id, user_id) VALUES ($1, $2)",
-      [result.rows[0].id, req.user.id]
-    );
-
-    res.redirect("/dashboard");
-  } catch (err) {
-    console.error("PROJECT ERROR:", err.message);
-    res.send("Project creation failed.");
+    const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const isAdmin = user.role === 'admin';
+    
+    if (isAdmin) {
+      const projects = await pool.query('SELECT * FROM projects');
+      const tasks = await pool.query('SELECT t.*, p.name as project_name FROM tasks t LEFT JOIN projects p ON t.project_id = p.id');
+      res.json({ projects: projects.rows, tasks: tasks.rows });
+    } else {
+      const projects = await pool.query('SELECT p.* FROM projects p JOIN project_members pm ON p.id = pm.project_id WHERE pm.user_id = $1', [user.id]);
+      const tasks = await pool.query('SELECT t.*, p.name as project_name FROM tasks t LEFT JOIN projects p ON t.project_id = p.id WHERE t.assigned_to = $1', [user.id]);
+      res.json({ projects: projects.rows, tasks: tasks.rows });
+    }
+  } catch {
+    res.json({ error: 'Unauthorized' });
   }
 });
 
-/* ---------- TASKS ---------- */
-app.post("/tasks", authMiddleware, async (req, res) => {
+app.get('/api/users', async (req, res) => {
+  const token = req.cookies.token;
+  if (!token) return res.json({ error: 'Unauthorized' });
+  
   try {
-    const { title, description, due_date, assigned_to, project_id, priority } =
-      req.body;
-
-    if (!title) return res.send("Task title required.");
-
-    await pool.query(
-      `INSERT INTO tasks 
-       (title, description, due_date, assigned_to, project_id, created_by, priority)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        title,
-        description,
-        due_date,
-        assigned_to || req.user.id,
-        project_id,
-        req.user.id,
-        priority || "medium",
-      ]
-    );
-
-    res.redirect("/dashboard");
-  } catch (err) {
-    console.error("TASK ERROR:", err.message);
-    res.send("Task creation failed.");
+    const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    if (user.role !== 'admin') return res.json({ error: 'Admin only' });
+    
+    const users = await pool.query('SELECT id, username, email, role FROM users');
+    res.json(users.rows);
+  } catch {
+    res.json({ error: 'Unauthorized' });
   }
 });
 
-app.post("/tasks/:id/status", authMiddleware, async (req, res) => {
-  try {
-    const taskResult = await pool.query(
-      "SELECT * FROM tasks WHERE id = $1",
-      [req.params.id]
-    );
-
-    const task = taskResult.rows[0];
-
-    if (
-      req.user.role !== "admin" &&
-      task.assigned_to !== req.user.id
-    ) {
-      return res.send("Unauthorized.");
-    }
-
-    await pool.query(
-      "UPDATE tasks SET status = $1 WHERE id = $2",
-      [req.body.status, req.params.id]
-    );
-
-    res.redirect("/dashboard");
-  } catch (err) {
-    console.error("STATUS UPDATE ERROR:", err.message);
-    res.send("Status update failed.");
-  }
-});
-
-/* ---------- PROJECT MEMBERS ---------- */
-app.post(
-  "/projects/:id/add-member",
-  authMiddleware,
-  adminMiddleware,
-  async (req, res) => {
-    try {
-      const result = await pool.query(
-        "SELECT id FROM users WHERE username = $1",
-        [req.body.username]
-      );
-
-      if (!result.rows[0]) {
-        return res.send("User not found.");
-      }
-
-      await pool.query(
-        "INSERT INTO project_members (project_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        [req.params.id, result.rows[0].id]
-      );
-
-      res.redirect("/dashboard");
-    } catch (err) {
-      console.error("ADD MEMBER ERROR:", err.message);
-      res.send("Failed to add member.");
-    }
-  }
-);
-
-/* ---------- PROMOTE ADMIN ---------- */
-app.post(
-  "/make-admin/:id",
-  authMiddleware,
-  adminMiddleware,
-  async (req, res) => {
-    try {
-      await pool.query(
-        "UPDATE users SET role = 'admin' WHERE id = $1",
-        [req.params.id]
-      );
-
-      res.redirect("/dashboard");
-    } catch (err) {
-      console.error("PROMOTE ERROR:", err.message);
-      res.send("Promotion failed.");
-    }
-  }
-);
-
-/* ---------- LOGOUT ---------- */
-app.get("/logout", (req, res) => {
-  res.clearCookie("token");
-  res.redirect("/login");
-});
-
-/* =========================
-   SERVER
-========================= */
 const PORT = process.env.PORT || 8080;
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
