@@ -1,7 +1,12 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, 'taskmanager.db'));
+const dbPath =
+  process.env.NODE_ENV === 'production'
+    ? '/tmp/taskmanager.db'
+    : path.join(__dirname, 'taskmanager.db');
+
+const db = new Database(dbPath);
 
 // Create tables if they don't exist
 db.exec(`
