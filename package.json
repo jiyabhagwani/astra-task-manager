@@ -1,8 +1,6 @@
 {
   "name": "astra-task-manager",
   "version": "1.0.0",
-  "description": "ASTRA - Team Productivity Platform",
-  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
