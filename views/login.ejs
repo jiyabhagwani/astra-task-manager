@@ -1,7 +1,10 @@
+// REPLACE YOUR CURRENT LOGIN ROUTE WITH THIS EXACT CODE
+
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    // Check user by email
     const user = db.prepare(`
       SELECT * FROM users WHERE email = ?
     `).get(email);
@@ -12,6 +15,7 @@ app.post('/login', async (req, res) => {
       });
     }
 
+    // Compare password
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
@@ -20,9 +24,26 @@ app.post('/login', async (req, res) => {
       });
     }
 
-    req.session.user = user;
+    // SAVE SESSION
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role || 'member'
+    };
 
-    return res.redirect('/dashboard');
+    // FORCE SESSION SAVE BEFORE REDIRECT
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session Save Error:', err);
+
+        return res.render('login', {
+          error: 'Session failed'
+        });
+      }
+
+      return res.redirect('/dashboard');
+    });
 
   } catch (err) {
     console.error('Login Error:', err);
