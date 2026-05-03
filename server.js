@@ -65,37 +65,49 @@ app.get('/', (req, res) => {
 // ─────────────────────────────────────────────
 // LOGIN
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// LOGIN ROUTES (PUT THIS INSIDE server.js)
+// ─────────────────────────────────────────────
+
+// Login page
 app.get('/login', (req, res) => {
   res.render('login', {
     error: null
   });
 });
 
+// Login submit
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = db.prepare(
-      'SELECT * FROM users WHERE email = ?'
-    ).get(email);
+    // Find user by email
+    const user = db.prepare(`
+      SELECT * FROM users
+      WHERE email = ?
+    `).get(email);
 
+    // User not found
     if (!user) {
       return res.render('login', {
         error: 'Invalid email or password'
       });
     }
 
+    // Verify password
     const validPassword = await bcrypt.compare(
       password,
       user.password
     );
 
+    // Wrong password
     if (!validPassword) {
       return res.render('login', {
         error: 'Invalid email or password'
       });
     }
 
+    // Save only safe session data
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -103,20 +115,28 @@ app.post('/login', async (req, res) => {
       role: user.role || 'member'
     };
 
+    // Save session first
     req.session.save((err) => {
       if (err) {
-        console.error('Session Save Error:', err);
+        console.error(
+          'Session Save Error:',
+          err
+        );
 
         return res.render('login', {
           error: 'Session failed'
         });
       }
 
+      // Success
       return res.redirect('/dashboard');
     });
 
   } catch (err) {
-    console.error('Login Error:', err);
+    console.error(
+      'Login Error:',
+      err
+    );
 
     return res.render('login', {
       error: 'Login failed'
