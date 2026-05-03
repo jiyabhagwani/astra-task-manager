@@ -1,92 +1,172 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Login | ASTRA</title>
-  <style>
-    body {
-      font-family: Arial;
-      background: linear-gradient(135deg, #0F172A, #1E1B4B);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASTRA | Login</title>
 
-    .card {
-      background: #1E1B4B;
-      padding: 40px;
-      border-radius: 20px;
-      width: 400px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    }
+<style>
+:root{
+  --bg1:#07111F;
+  --bg2:#0B1D33;
+  --card:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.08);
+  --accent:#38BDF8;
+  --accent2:#14B8A6;
+  --text:#F8FAFC;
+  --muted:#94A3B8;
+  --danger:#EF4444;
+}
 
-    .logo {
-      font-size: 32px;
-      font-weight: bold;
-      color: #4F46E5;
-      text-align: center;
-      margin-bottom: 30px;
-    }
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
 
-    input {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      background: #0F172A;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-size: 14px;
-    }
+body{
+  font-family:Inter,Segoe UI,sans-serif;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:
+    radial-gradient(circle at top right, rgba(56,189,248,0.15), transparent 30%),
+    radial-gradient(circle at bottom left, rgba(20,184,166,0.12), transparent 30%),
+    linear-gradient(180deg,var(--bg1),var(--bg2));
+  color:var(--text);
+}
 
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #4F46E5;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
+.card{
+  width:100%;
+  max-width:430px;
+  background:var(--card);
+  backdrop-filter:blur(20px);
+  border:1px solid var(--border);
+  border-radius:28px;
+  padding:38px;
+  box-shadow:0 25px 60px rgba(0,0,0,0.35);
+}
 
-    .error {
-      color: #F87171;
-      text-align: center;
-      margin-bottom: 10px;
-    }
+.logo{
+  text-align:center;
+  font-size:42px;
+  font-weight:900;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin-bottom:10px;
+}
 
-    .link {
-      text-align: center;
-      margin-top: 15px;
-      color: #94A3B8;
-    }
+.subtitle{
+  text-align:center;
+  color:var(--muted);
+  margin-bottom:26px;
+}
 
-    a {
-      color: #4F46E5;
-      text-decoration: none;
-    }
-  </style>
+input{
+  width:100%;
+  padding:15px;
+  margin-bottom:14px;
+  border:none;
+  border-radius:16px;
+  background:rgba(255,255,255,0.06);
+  color:white;
+  font-size:15px;
+}
+
+button{
+  width:100%;
+  padding:15px;
+  border:none;
+  border-radius:16px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;
+  font-weight:800;
+  font-size:15px;
+  cursor:pointer;
+}
+
+button:hover{
+  transform:translateY(-1px);
+}
+
+.error{
+  background:rgba(239,68,68,0.12);
+  color:#FCA5A5;
+  padding:12px;
+  border-radius:14px;
+  margin-bottom:16px;
+  text-align:center;
+}
+
+.hint{
+  margin-top:18px;
+  text-align:center;
+  color:#BAE6FD;
+  font-size:13px;
+}
+
+.link{
+  margin-top:20px;
+  text-align:center;
+  color:var(--muted);
+}
+
+.link a{
+  color:var(--accent);
+  text-decoration:none;
+  font-weight:700;
+}
+</style>
 </head>
-<body>
-<div class="card">
-  <div class="logo">✨ ASTRA</div>
 
-  <% if (error) { %>
+<body>
+
+<div class="card">
+
+  <div class="logo">🌊 ASTRA</div>
+
+  <div class="subtitle">
+    Ocean OS for elite execution
+  </div>
+
+  <% if(error) { %>
     <div class="error"><%= error %></div>
   <% } %>
 
   <form method="POST" action="/login">
-    <input type="text" name="username" placeholder="Username" required>
-    <input type="password" name="password" placeholder="Password" required>
-    <button type="submit">Login</button>
+
+    <input
+      type="email"
+      name="email"
+      placeholder="Email"
+      required
+    >
+
+    <input
+      type="password"
+      name="password"
+      placeholder="Password"
+      required
+    >
+
+    <button type="submit">
+      Enter Command Center
+    </button>
+
   </form>
 
-  <div class="link">
-    Don't have an account?
-    <a href="/signup">Sign up</a>
+  <div class="hint">
+    ✨ Signup with @astra.com to unlock Admin Command Center
   </div>
+
+  <div class="link">
+    New here?
+    <a href="/signup">Create Account</a>
+  </div>
+
 </div>
+
 </body>
 </html>
